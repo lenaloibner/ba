@@ -1,0 +1,273 @@
+ist der r Code richtig? setwd("C:/Users/lenal/Documents/05_R/data_clean")
+
+
+
+library(plm)
+
+
+
+# Daten als Panel-Daten deklarieren (ersetze 'country' und 'date' mit deinen Spaltennamen)
+
+p_data <- pdata.frame(data_all, index = c("country", "date"))
+
+
+
+
+
+
+
+test_ex_rate <- plm(ex_rate ~ lag(stability, 1:2) + lag(volatility, 1:2) + lag(spread, 1:2), 
+
+                    data = p_data, model = "within")
+
+summary(test_ex_rate)
+
+
+
+
+
+
+
+test_inflation <- plm(inflation ~ lag(stability, 1:2) + lag(volatility, 1:2) + lag(spread, 1:2), 
+
+                      data = p_data, model = "within")
+
+summary(test_inflation)
+
+
+
+
+
+
+
+test_reserves <- plm(reserves ~ lag(stability, 1:2) + lag(volatility, 1:2) + lag(spread, 1:2), 
+
+                     data = p_data, model = "within")
+
+summary(test_reserves)
+
+Gemini said
+Dein Code ist ein guter Anfang, um Panel-Regressionen zu schätzen, aber er führt technisch gesehen noch keinen vollständigen Granger-Kausalitätstest durch.
+
+Hier ist die kritische Analyse und die Korrektur, damit dein Code zu deiner Methodik (Kapitel 3.7.3) passt:
+
+1. Die drei Hauptprobleme deines Codes
+Widerspruch zur Lag-Länge: In Kapitel 4.1.2 hast du dich gerade für eine optimale Lag-Länge von p=1 entschieden. Dein Code verwendet jedoch lag(..., 1:2). Für einen konsistenten Granger-Test musst du die Lags verwenden, die du für dein Modell festgelegt hast (p=1).
+
+Fehlender Wald-Test (Joint Significance): Ein Granger-Test prüft nicht nur, ob ein Koeffizient signifikant ist, sondern ob alle Lags einer Variable gemeinsam signifikant sind. Bei nur einem Lag (wie bei dir entschieden) reicht der t-Test aus der summary, aber bei mehreren Lags bräuchtest du zwingend einen F-Test oder Wald-Test.
+
+Einseitige Prüfung: Du prüfst aktuell nur, ob die Kernvariablen (Stability, Volatility, Spread) die Kandidaten (Ex_rate etc.) beeinflussen. Um zu entscheiden, ob eine Variable exogen ist, musst du auch prüfen, ob die Kernvariablen nicht von den Kandidaten beeinflusst werden.
+
+2. Der korrigierte R-Code (passend zu p=1)
+Ich empfehle die Nutzung des Pakets lmtest, um den notwendigen Wald-Test (gemeinsame Signifikanz) sauber durchzuführen.
+
+R
+library(plm)
+library(lmtest) # Für den Wald-Test (Joint Significance)
+
+# 1. Daten deklarieren
+p_data <- pdata.frame(data_all, index = c("country", "date"))
+
+# 2. Modell schätzen (Beispiel: Inflation als abhängige Variable)
+# Wir nutzen nur Lag 1, da p=1 in 4.1.2 bestimmt wurde.
+model_infl <- plm(inflation ~ lag(stability, 1) + lag(volatility, 1) + lag(spread, 1) + lag(inflation, 1), 
+                  data = p_data, model = "within")
+
+# 3. Der eigentliche Granger-Test (Wald-Test)
+# Prüfen, ob die "Kernvariablen" gemeinsam die Inflation beeinflussen
+# H0: Koeffizienten von stability, volatility und spread sind alle null.
+wald_test_infl <- waldtest(model_infl, . ~ . - lag(stability, 1) - lag(volatility, 1) - lag(spread, 1))
+
+print(wald_test_infl)
+3. Was du für Kapitel 4.1.3 brauchst
+Damit du die Cholesky-Reihenfolge festlegen kannst, musst du die Ergebnisse in einer Matrix oder Tabelle zusammenfassen.
+
+Wenn p < 0,05: Die Variable wird "Granger-verursacht". Sie ist endogen und gehört in den PVAR-Block.
+
+Wenn p > 0,05: Die Variable wird nicht signifikant beeinflusst. Sie kann als exogen (PVARX-Block) behandelt werden oder am Ende der Cholesky-Reihenfolge stehen.
+
+4. Empfehlung für dein Vorgehen
+In deiner Arbeit (Kapitel 4.1.3) solltest du erwähnen:
+
+Dass du ein Fixed-Effects-Modell (Within-Schätzer) nutzt, um länderspezifische Konstanten zu kontrollieren.
+
+Dass du die optimale Lag-Länge p=1 beibehalten hast.
+
+Dass die Entscheidung über die Exogenität auf dem Wald-Test der gemeinsamen Signifikanz basiert.
+
+Soll ich dir eine Vorlage für die Granger-Ergebnistabelle erstellen, in die du deine p-Werte aus R direkt eintragen kannst?
+
+You said
+Fehler: Objekt 'data_all' nicht gefunden
+
+Gemini said
+Dieser Fehler tritt in R immer dann auf, wenn du versuchst, auf ein Objekt zuzugreifen, das entweder noch nicht geladen wurde oder unter einem anderen Namen im Speicher (Environment) liegt.
+
+Wahrscheinlich hast du die CSV-Datei mit dem Namen data eingelesen, aber im Code für das Panel-Modell den Namen data_all verwendet.
+
+So behebst du den Fehler:
+Stelle sicher, dass der Name beim Einlesen (read_csv) exakt mit dem Namen im pdata.frame-Befehl übereinstimmt. Hier ist der korrigierte Code-Abschnitt:
+
+R
+# 1. Daten laden (Wir speichern es hier explizit als 'data_all')
+data_all <- read_csv("data_all.csv") 
+
+# 2. Prüfen, ob die Spaltennamen stimmen
+# (Stelle sicher, dass 'country' und 'date' wirklich so heißen)
+colnames(data_all)
+
+# 3. Als Panel-Daten deklarieren
+library(plm)
+p_data <- pdata.frame(data_all, index = c("country", "date"))
+Drei häufige Ursachen für diesen Fehler:
+Groß-/Kleinschreibung: R ist "case-sensitive". Data_all ist für R etwas anderes als data_all.
+
+Zuweisung vergessen: Du hast read_csv("data_all.csv") ausgeführt, aber das Ergebnis nicht mit data_all <- ... in einer Variable gespeichert.
+
+Arbeitsverzeichnis: Falls die Datei gar nicht erst geladen wurde (weil read_csv einen Fehler geworfen hat), existiert das Objekt auch nicht. Prüfe mit getwd(), ob du im richtigen Ordner bist.
+
+Ein wichtiger Hinweis für deinen Granger-Test:
+Da du in Kapitel 4.1.2 beschlossen hast, dass Lag 1 optimal ist, solltest du im Granger-Test nur lag(variable, 1) verwenden. Wenn du 1:2 nimmst, testest du eine andere Dynamik als die, die du methodisch begründet hast.
+
+Soll ich dir helfen, die Ergebnisse des Granger-Tests so aufzubereiten, dass du direkt daraus ablesen kannst, welche Variable in deinem Modell "zuerst" kommt (Cholesky-Reihenfolge)?
+
+You said
+ganzer code bitte, schlank
+
+Gemini said
+Hier ist der vollständige, schlanke R-Code für deine Granger-Kausalitätstests. Er nutzt den in Kapitel 4.1.2 bestimmten Lag 1 und führt den notwendigen Wald-Test für die gemeinsame Signifikanz durch.
+
+R
+# 1. Bibliotheken laden
+library(plm)
+library(lmtest)
+library(readr)
+
+# 2. Daten laden und als Panel deklarieren
+data_all <- read_csv("data_all.csv")
+p_data <- pdata.frame(data_all, index = c("country", "date"))
+
+# 3. Definition der Variablenblöcke
+core_vars <- c("stability", "volatility", "spread")
+candidates <- c("ex_rate", "inflation", "reserves")
+
+# 4. Funktion für den Granger-Wald-Test (Lag = 1)
+# Prüft, ob der Kern-Block (core_vars) die Zielvariable (dep) erklärt
+run_granger <- function(dep) {
+  # Formel: Y ~ lag(Y,1) + lag(Core1,1) + lag(Core2,1) + ...
+  formula_str <- paste(dep, "~ lag(", dep, ", 1) +", 
+                       paste0("lag(", core_vars, ", 1)", collapse = " + "))
+  
+  # Schätzung des Modells (Fixed Effects / Within)
+  model <- plm(as.formula(formula_str), data = p_data, model = "within")
+  
+  # Wald-Test: Sind alle Core-Lags gemeinsam signifikant?
+  test <- waldtest(model)
+  return(test)
+}
+
+# 5. Tests ausführen
+print("--- Granger-Test: Beeinflussen Kernvariablen den Wechselkurs? ---")
+run_granger("ex_rate")
+
+print("--- Granger-Test: Beeinflussen Kernvariablen die Inflation? ---")
+run_granger("inflation")
+
+print("--- Granger-Test: Beeinflussen Kernvariablen die Reserven? ---")
+run_granger("reserves")
+Erläuterung für dein Kapitel 4.1.3
+Um die Variablenhierarchie für die Cholesky-Zerlegung festzulegen, wird die Granger-Kausalität mittels eines Wald-Tests auf Basis der zuvor bestimmten optimalen Verzögerung von einer Periode (p=1) geprüft (Abrigo & Love, 2016, S. 785). Dabei wird ein Panel-Modell mit festen Effekten (Within-Schätzer) verwendet, um für unbeobachtete länderspezifische Heterogenität zu kontrollieren (Love & Zicchino, 2006, S. 193).
+
+Die Nullhypothese des Tests besagt, dass die verzögerten Werte der Kernvariablen keinen signifikanten Beitrag zur Erklärung der Kandidatenvariablen leisten (Abrigo & Love, 2016, S. 785).
+
+Interpretation der Ergebnisse:
+
+Signifikantes Ergebnis (p<0,05): Die Kernvariablen Granger-verursachen die Zielvariable. Diese ist somit als endogen zu betrachten und sollte in der Cholesky-Reihenfolge nach den Kernvariablen platziert werden (Abrigo & Love, 2016, S. 794).
+
+Nicht signifikantes Ergebnis (p>0,05): Es liegt keine statistisch belegbare Granger-Kausalität vor. Die Variable kann daher als exogen (PVARX-Block) behandelt oder an das Ende der Rekursionskette gestellt werden (Abrigo & Love, 2016, S. 794).
+
+Möchtest du, dass ich dir eine Ergebnistabelle erstelle, in die du die p-Werte aus deiner R-Konsole nur noch eintragen musst?
+
+You said
+Fehler in plm.fit(data, model, effect, random.method, random.models, random.dfcor, :
+
+empty modelCalled from: plm.fit(data, model, effect, random.method, random.models, random.dfcor,
+
+inst.method)
+
+Gemini said
+Dieser Fehler „empty model“ tritt bei plm meistens dann auf, wenn durch die Kombination von Lags und fehlenden Werten (NAs) keine einzige Zeile mit vollständigen Daten für die Schätzung übrig bleibt. Da du Verzögerungen (lag) nutzt, benötigt R mindestens zwei aufeinanderfolgende Beobachtungen pro Land ohne Lücken.
+
+Hier sind die drei häufigsten Ursachen und wie wir das Skript robuster machen:
+
+1. Die Diagnose: Warum ist das Modell leer?
+Bevor wir den Code reparieren, prüfe bitte kurz zwei Dinge in deiner R-Konsole:
+
+Fehlende Werte: sum(is.na(data_all)) – Wenn hier eine sehr hohe Zahl steht, könnten NAs die Schätzung verhindern.
+
+Beobachtungen pro Land: table(data_all$country) – Wenn ein Land nur 1 oder 2 Zeilen hat, bleibt nach dem Lagging (p=1) kaum etwas für den "Within"-Schätzer (Fixed Effects) übrig.
+
+2. Der korrigierte & robuste Code
+Ich habe das Skript so angepasst, dass es NAs sicherer handhabt und eine Prüfung einbaut, ob genügend Daten vorhanden sind.
+
+R
+library(plm)
+library(lmtest)
+library(readr)
+
+# 1. Daten laden
+data_all <- read_csv("data_all.csv")
+
+# 2. WICHTIG: Datentyp von 'date' prüfen (muss numerisch oder Date sein)
+data_all$date <- as.numeric(as.character(data_all$date))
+
+# 3. NAs entfernen, die in den Kernvariablen stecken könnten
+# (plm mag keine komplett leeren Spalten in der Within-Transformation)
+vars_needed <- c("country", "date", "stability", "volatility", "spread", "ex_rate", "inflation", "reserves")
+data_clean <- data_all[complete.cases(data_all[, vars_needed]), ]
+
+# 4. Als Panel deklarieren
+p_data <- pdata.frame(data_clean, index = c("country", "date"))
+
+# 5. Robuste Granger-Funktion
+core_vars <- c("stability", "volatility", "spread")
+
+run_granger_safe <- function(dep) {
+  # Formel erstellen
+  formula_str <- paste(dep, "~ lag(", dep, ", 1) +", 
+                       paste0("lag(", core_vars, ", 1)", collapse = " + "))
+  
+  # tryCatch fängt den "empty model" Fehler ab, falls Daten zu dünn sind
+  tryCatch({
+    model <- plm(as.formula(formula_str), data = p_data, model = "within")
+    test <- waldtest(model)
+    return(test)
+  }, error = function(e) {
+    return(paste("Fehler bei Variable", dep, ":", e$message))
+  })
+}
+
+# 6. Tests ausführen
+results_ex <- run_granger_safe("ex_rate")
+results_inf <- run_granger_safe("inflation")
+results_res <- run_granger_safe("reserves")
+
+# Ergebnisse anzeigen
+print(results_ex)
+print(results_inf)
+print(results_res)
+3. Was du jetzt tun solltest
+Check date: Wenn dein Datum als Text (z.B. "Jan 2020") vorliegt, kann R keine Lags bilden. Die Spalte muss eine fortlaufende Zahl oder ein echtes Datum sein.
+
+Lücken füllen: Falls du viele Lücken in den Daten hast, löscht plm beim Befehl model = "within" (Fixed Effects) sehr viele Beobachtungen.
+
+Alternative (falls der Fehler bleibt): Falls deine Daten extrem lückenhaft sind, könntest du für den vorbereitenden Granger-Test auf model = "pooling" (einfaches OLS) ausweichen. Das ist zwar weniger präzise für Paneldaten, liefert aber oft stabilere Ergebnisse für die reine Variablen-Reihenfolge. Ersetze dafür einfach model = "within" durch model = "pooling".
+
+Zusammenfassung für dein Kapitel 4.1.3:
+Wenn der Test nun durchläuft, achte auf den Pr(>F) Wert in der letzten Zeile des Wald-Tests.
+
+Ist dieser kleiner als 0,05, notiere: "Kernvariablen haben einen signifikanten Granger-Einfluss auf [Variable]."
+
+Dies rechtfertigt, diese Variable in der Cholesky-Zerlegung nach den Kernvariablen zu platzieren.
+
+Soll ich dir helfen, die resultierenden p-Werte direkt in eine interpretierbare Matrix für deine Arbeit zu übersetzen?

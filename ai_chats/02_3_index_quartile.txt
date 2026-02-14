@@ -1,0 +1,27 @@
+ 
+schreibe mir einen ganz kurzen schlanken r code der mir die quartile dieser datei ausgibt: C:\Users\lenal\OneDrive\Dokumente\BA\data_raw
+Hier ist der kürzeste und sauberste R-Code, um aus deiner Datei die Quartile (0.25 / 0.50 / 0.75) für average PC1 und stdev PC1 auszulesen.
+Du musst nur den Dateinamen anpassen (z. B. pc1.csv).
+Der Ordner steht fest:
+C:/Users/lenal/OneDrive/Dokumente/BA/data_raw/
+________________________________________
+✅ Minimaler R-Code
+# Datei einlesen
+df <- read.csv("C:/Users/lenal/OneDrive/Dokumente/BA/data_raw/pc1.csv")
+
+# Quartile ausgeben
+quantile(df$average.PC1, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+quantile(df$stdevp.PC1,  probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+________________________________________
+Falls die Spalten anders heißen (z. B. average PC1 mit Leerzeichen), nimm:
+df$`average PC1`
+df$`stdevp PC1`
+Beispiel:
+quantile(df$`average PC1`, c(0.25, 0.5, 0.75), na.rm = TRUE)
+quantile(df$`stdevp PC1`,  c(0.25, 0.5, 0.75), na.rm = TRUE)
+________________________________________
+Wenn du willst, kann ich dir auch:
+✔ den Code automatisieren (eine einzige Funktion)
+✔ oder deine Datei direkt hier analysieren
+Sag einfach Bescheid!
+

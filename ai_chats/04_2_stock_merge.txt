@@ -1,0 +1,206 @@
+schreibe ein script welches folgende variablen für folgende Länder zusammenfügt: Datenaggregation: monatlich (2014-2023) Country Stock_Index (Yahoo Finance) Norway Yahoo Finance → ^OSEAX Canada Yahoo Finance → ^GSPTSE South Korea Yahoo Finance → ^KS11 (KOSPI) Mauritius Investing.com → SEMDEX India Yahoo Finance → ^NSEI (NIFTY 50) Colombia Yahoo Finance → COLCAP Nigeria Investing.com → NGX ASI Turkey Yahoo Finance → XU100.IS Mauritius, colombia, und india werden einzeln in einer csv datei angefügt später. was sind die schritte?
+Perfekt 👍 — das Ziel ist klar:
+Du möchtest die monatlichen Aktienindizes (2014–2023) aus Yahoo Finance + drei CSV-Dateien (Investing.com) zu einer gemeinsamen Datendatei zusammenführen.
+Ich zeige dir erst die Arbeitsschritte, dann bekommst du ein sicheres, kommentiertes R-Skript.
+________________________________________
+🧭 Arbeitsschritte
+1. Projektstruktur anlegen
+Erstelle in RStudio einen klaren Projektordner:
+BA_PVAR/
+ ├── data_raw/        # Rohdaten (CSV, von Yahoo & Investing)
+ ├── data_clean/      # bereinigte Daten (monatlich aggregiert)
+ ├── scripts/         # R-Skripte
+ ├── outputs/         # finale zusammengeführte Datei
+ └── plots/           # (später für Visualisierungen)
+Speichere deine drei CSV-Dateien dort ab:
+data_raw/data_colcap.csv
+data_raw/data_ngseindex.csv
+data_raw/data_semdex.csv
+________________________________________
+2. R-Pakete installieren (einmalig)
+Diese Pakete brauchst du:
+install.packages(c("tidyverse", "quantmod", "lubridate", "readr"))
+________________________________________
+3. Yahoo-Daten herunterladen
+Mit quantmod::getSymbols() holst du:
+•	Norwegen (^OSEAX)
+•	Kanada (^GSPTSE)
+•	Südkorea (^KS11)
+•	Indien (^NSEI)
+•	Türkei (^XU100.IS)
+________________________________________
+4. Daten monatlich aggregieren
+Wir konvertieren tägliche Daten zu Monatsdurchschnitten oder Monatsendwerten (je nach Methodik deiner Arbeit, i. d. R. Monatsende).
+________________________________________
+5. CSV-Dateien einlesen und vereinheitlichen
+Die drei CSVs aus Investing.com haben unterschiedliche Spaltennamen → wir bringen sie auf ein gemeinsames Format:
+Date, Close, Country, Index.
+________________________________________
+6. Alle Länder zusammenführen
+Am Ende entsteht eine kombinierte Datei:
+all_stock_indices_2014_2023.csv
+________________________________________
+💻 R-Skript: scripts/01_merge_stock_indices.R
+# ---------------------------------------------------------
+# Script: 01_merge_stock_indices.R
+# Zweck:  Sammeln, Vereinheitlichen & Zusammenführen von Aktienindizes
+# Zeitraum: 2014–2023, monatliche Daten
+# ---------------------------------------------------------
+
+# Pakete laden
+library(quantmod)
+library(tidyverse)
+library(lubridate)
+library(readr)
+
+# Projektpfade --------------------------------------------------------------
+raw_path <- "data_raw/"
+clean_path <- "data_clean/"
+output_path <- "outputs/"
+
+# Yahoo Finance Indizes -----------------------------------------------------
+symbols <- c(
+  "OSEAX" = "^OSEAX",      # Norway
+  "GSPTSE" = "^GSPTSE",    # Canada
+  "KS11" = "^KS11",        # South Korea
+  "NSEI" = "^NSEI",        # India
+  "XU100.IS" = "XU100.IS"  # Turkey
+)
+
+getSymbols(Symbols = symbols, from = "2014-01-01", to = "2023-12-31")
+
+# In Dataframe umwandeln und monatlich aggregieren --------------------------
+make_monthly <- function(symbol, country_name) {
+  df <- get(symbol)
+  df_monthly <- to.monthly(df, indexAt = "lastof", OHLC = FALSE)
+  df_tidy <- data.frame(
+    Date = index(df_monthly),
+    Close = as.numeric(df_monthly[, 1]),
+    Country = country_name,
+    Index = symbol
+  )
+  return(df_tidy)
+}
+
+# Länder zuordnen
+df_norway  <- make_monthly("OSEAX", "Norway")
+df_canada  <- make_monthly("GSPTSE", "Canada")
+df_korea   <- make_monthly("KS11", "South Korea")
+df_india   <- make_monthly("NSEI", "India")
+df_turkey  <- make_monthly("XU100.IS", "Turkey")
+
+# Manuelle CSVs einlesen ----------------------------------------------------
+read_manual_csv <- function(file, country, index_name) {
+  read_csv(paste0(raw_path, file)) %>%
+    rename(Date = 1, Close = 2) %>%    # anpassen je nach Spaltenstruktur
+    mutate(
+      Date = as.Date(Date),
+      Country = country,
+      Index = index_name
+    )
+}
+
+df_colombia <- read_manual_csv("data_colcap.csv", "Colombia", "COLCAP")
+df_mauritius <- read_manual_csv("data_semdex.csv", "Mauritius", "SEMDX")
+df_nigeria <- read_manual_csv("data_ngseindex.csv", "Nigeria", "NGSEINDEX")
+
+# Alles zusammenführen ------------------------------------------------------
+all_indices <- bind_rows(
+  df_norway, df_canada, df_korea, df_india, df_turkey,
+  df_colombia, df_mauritius, df_nigeria
+)
+
+# Nach Datum sortieren
+all_indices <- all_indices %>%
+  arrange(Country, Date)
+
+# Nur 2014–2023 behalten
+all_indices <- all_indices %>%
+  filter(Date >= "2014-01-01", Date <= "2023-12-31")
+
+# Speichern -----------------------------------------------------------------
+write_csv(all_indices, paste0(output_path, "all_stock_indices_2014_2023.csv"))
+
+# Kurzer Check --------------------------------------------------------------
+glimpse(all_indices)
+summary(all_indices$Close)
+________________________________________
+✅ Ergebnis
+Du erhältst:
+outputs/all_stock_indices_2014_2023.csv
+mit den Spalten:
+| Date | Close | Country | Index |
+→ Damit hast du die monatlichen Aktienindizes aller 8 Länder vereinheitlicht und kannst sie in der nächsten Stufe (z. B. Log-Renditen berechnen, PVAR-Modell etc.) weiterverwenden.
+________________________________________
+Möchtest du, dass ich das Skript so erweitere, dass es gleich die monatlichen Renditen (log returns) mitberechnet und in einer zweiten Datei speichert (returns_stock_indices.csv)?
+ 
+ 
+die csv dateien sehen aus wie im bild. 
+Perfekt 👍 — danke für die Screenshots!
+Ich sehe genau, was los ist:
+________________________________________
+🔍 Probleme & Lösungen
+1. Fehlermeldung „does not exist in current working directory“
+Das bedeutet:
+➡️ R sucht die CSV-Dateien im falschen Ordner.
+Du arbeitest gerade im Skript-Ordner
+C:/Users/lena1/OneDrive/Dokumente/BA/scripts/
+aber deine CSVs liegen vermutlich eine Ebene höher oder woanders.
+Lösung:
+Lege sie in den Ordner:
+C:/Users/lena1/OneDrive/Dokumente/BA/data_raw/
+und überprüfe, ob das so aussieht:
+BA/
+ ├── data_raw/
+ │     ├── data_colcap.csv
+ │     ├── data_ngseindex.csv
+ │     ├── data_semdex.csv
+ └── scripts/
+       └── 01_merge_stock_indices.R
+Dann in RStudio oben im Menü:
+Session → Set Working Directory → To Source File Location
+(Damit arbeitet R ab sofort relativ zum Skriptverzeichnis.)
+________________________________________
+2. Spaltenstruktur der CSV-Dateien
+Dein Screenshot zeigt:
+| Date | Price | Open | High | Low | Vol. | Change % |
+➡️ Also müssen wir die Spalte „Price“ verwenden und nicht „Close“.
+Hier ist der korrigierte CSV-Import:
+# ---------------------------------------------------------
+# Manuelle CSVs einlesen (Investing.com)
+# ---------------------------------------------------------
+read_manual_csv <- function(file, country, index_name) {
+  read_csv(paste0(raw_path, file)) %>%
+    rename(
+      Date = Date,
+      Close = Price
+    ) %>%
+    mutate(
+      Date = dmy(Date),              # Datum im Format 01/01/2014
+      Country = country,
+      Index = index_name
+    ) %>%
+    select(Date, Close, Country, Index)
+}
+
+df_colombia <- read_manual_csv("data_colcap.csv", "Colombia", "COLCAP")
+df_mauritius <- read_manual_csv("data_semdex.csv", "Mauritius", "SEMDX")
+df_nigeria <- read_manual_csv("data_ngseindex.csv", "Nigeria", "NGSEINDEX")
+📘 Erklärung:
+•	dmy(Date) erkennt dein Datum im Format „01/01/2014“.
+•	rename(Close = Price) nutzt den richtigen Preis.
+•	select(...) sortiert die Spalten sauber.
+________________________________________
+3. Warnung „missing values removed from data“
+Das ist kein Fehler, nur eine Info von to.period():
+→ es entfernt NA-Zeilen beim Monatswechsel. Das ist normal.
+________________________________________
+✅ Nächster Schritt
+1.	Stelle sicher, dass der Ordner data_raw korrekt ist.
+2.	Kopiere die obige Funktion ins Skript (sie ersetzt die alte Version).
+3.	Speichere und führe das Skript erneut aus.
+Dann sollte alles fehlerfrei durchlaufen und die Datei
+outputs/all_stock_indices_2014_2023.csv erstellt werden.
+________________________________________
+Möchtest du, dass ich im nächsten Schritt zeige, wie du monatliche log-Renditen aus dieser zusammengeführten Datei berechnest (damit du sie direkt für das PVAR-Modell nutzen kannst)?
+

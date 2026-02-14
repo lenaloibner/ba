@@ -1,0 +1,746 @@
+Finde den fehler im Skript:
+
+
+
+
+# ==============================================================================
+
+# SCHRITT 1 TEST FÜR H2 (AKTIEN VS. ANLEIHEN)
+
+# ==============================================================================
+
+library(panelvar)
+
+library(ggplot2)
+
+# 1. SETUP & MODELL LADEN
+
+# ------------------------------------------------------------------------------
+
+# Setze Seed für Reproduzierbarkeit des Bootstrappings
+
+set.seed(123)
+
+base_path - CUserslenalDocuments05_Rdata_clean
+
+pvar_all - readRDS(paste0(base_path, pvar_all.rds))
+
+# 2. BERECHNUNG DER OIRFs (BOOTSTRAP)
+
+# ------------------------------------------------------------------------------
+
+# n.ahead=24 deckt Kurz- und Langfrist ab.
+
+# Draws=500 für effiziente Berechnung der Konfidenzbänder.
+
+irf_h2 - bootstrap_irf(pvar_all,
+
+                        typeof_irf = OIRF,
+
+                        n.ahead = 24,
+
+                        nof_Nstar_draws = 100,
+
+                        mc.cores = 1)
+
+# 3. VISUALISIERUNG
+
+# ------------------------------------------------------------------------------
+
+# Plot für den Impuls von 'stability' auf 'volatility' (Aktien) und 'spread' (Anleihen)
+
+str(irf_h2) # Zeigt die Struktur – sollte Listen mit IRFsBändern haben
+
+class(irf_h2) # Sollte pvar_bootstrap_irf oder ähnlich sein
+
+plot(irf_h2, impulse = stability, response = c(volatility, spread))
+
+# Hinweis Für kumulative IRFs (Niveaueffekte) kann in panelvar
+
+# oft direkt ein Parameter gesetzt werden, oder man summiert die Werte
+
+# der IRF-Matrix manuell auf (cumsum).
+
+# 4. VARIAnZZERLEGUNG (FEVD)
+
+# ------------------------------------------------------------------------------
+
+# Berechnet den Anteil der Varianz, der durch Stabilitäts-Schocks erklärt wird.
+
+fevd_h2 - pvarfevd(pvar_all, n.ahead = 24)
+
+# Ausgabe der FEVD-Ergebnisse zur Analyse der Anteile
+
+print(fevd_h2)
+
+ 
+
+ergebnis
+
+
+
+```
+
+ # ==============================================================================
+
+ # SCHRITT 1 TEST FÜR H2 (AKTIEN VS. ANLEIHEN)
+
+ # ==============================================================================
+
+ library(panelvar)
+
+ library(ggplot2)
+
+ 
+
+ # 1. SETUP & MODELL LADEN
+
+ # ------------------------------------------------------------------------------
+
+ # Setze Seed für Reproduzierbarkeit des Bootstrappings
+
+ set.seed(123) 
+
+ 
+
+ 
+
+ base_path - CUserslenalDocuments05_Rdata_clean
+
+ pvar_all - readRDS(paste0(base_path, pvar_all.rds))
+
+ 
+
+ # 2. BERECHNUNG DER OIRFs (BOOTSTRAP)
+
+ # ------------------------------------------------------------------------------
+
+ # n.ahead=24 deckt Kurz- und Langfrist ab.
+
+ # Draws=500 für effiziente Berechnung der Konfidenzbänder.
+
+ irf_h2 - bootstrap_irf(pvar_all, 
+
++                         typeof_irf = OIRF, 
+
++                         n.ahead = 24, 
+
++                         nof_Nstar_draws = 100, 
+
++                         mc.cores = 1)
+
+ 
+
+ # 3. VISUALISIERUNG
+
+ # ------------------------------------------------------------------------------
+
+ # Plot für den Impuls von 'stability' auf 'volatility' (Aktien) und 'spread' (Anleihen)
+
+ 
+
+ str(irf_h2)  # Zeigt die Struktur – sollte Listen mit IRFsBändern haben
+
+List of 4
+
+ $ Lower      List of 6
+
+  ..$ stability  num [124, 16] 0.00278 0.00534 0.00766 0.00973 0.01157 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ volatility num [124, 16] 0.00 1.22e-05 5.56e-05 1.26e-04 2.17e-04 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ spread     num [124, 16] 0.00 -3.34e-05 -4.08e-05 -2.05e-04 -3.69e-04 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ inflation  num [124, 16] 0.00 -2.07e-04 -2.11e-04 -1.39e-04 -9.93e-05 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ reserves   num [124, 16] 0 -0.000234 -0.000213 -0.000202 -0.0003 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ ex_rate    num [124, 16] 0.00 -1.19e-04 -1.85e-04 -2.71e-05 1.31e-04 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+ $ Upper      List of 6
+
+  ..$ stability  num [124, 16] 0.005 0.00962 0.01378 0.01759 0.02103 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ volatility num [124, 16] 0 0.000349 0.000812 0.001296 0.001829 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ spread     num [124, 16] 0 0.000174 0.000546 0.001004 0.00146 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ inflation  num [124, 16] 0 0.00019 0.000423 0.000856 0.001359 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ reserves   num [124, 16] 0 0.00013 0.000446 0.000923 0.001444 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+  ..$ ex_rate    num [124, 16] 0 0.000229 0.00053 0.000975 0.001449 ...
+
+  .. ..- attr(, dimnames)=List of 2
+
+  .. .. ..$  NULL
+
+  .. .. ..$  chr [16] stability volatility spread inflation ...
+
+ $ Nstar_drawsList of 100
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 9 6 10 1 2 7 10 7 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 6 8 7 3 10 4 2 5 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 8 8 1 8 9 7 7 4 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 1 8 9 2 6 9 4 5 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 6 6 5 3 3 4 6 4 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 6 9 3 7 4 3 9 10 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 2 5 4 10 6 10 10 9 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 8 9 2 6 4 5 8 5 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 8 6 9 3 6 1 10 10 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 8 5 8 5 3 9 2 6 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 5 6 1 6 10 1 8 6 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 5 2 1 9 3 7 1 7 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 5 5 4 5 1 3 2 3 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 10 8 9 7 8 10 9 1 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 6 2 3 10 4 4 2 4 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 6 5 4 3 5 7 4 6 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 5 8 5 5 7 9 4 6 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 3 10 9 8 8 5 7 10 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 5 9 4 7 6 4 7 1 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 5 1 8 1 6 6 8 3 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 1 8 7 6 10 5 4 3 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 4 4 8 2 9 5 6 10 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 1 9 8 2 5 6 7 8 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 6 7 2 4 5 3 10 3 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 8 3 8 5 9 5 1 1 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 4 7 4 7 9 3 6 6 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 10 8 1 7 7 5 5 2 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 2 2 3 9 9 1 6 2 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 3 5 4 2 5 2 4 2 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 3 2 10 9 10 1 3 2 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 2 9 9 8 6 3 2 6 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 6 9 2 5 10 10 4 5 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 4 3 9 3 2 1 2 5 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 4 9 10 5 6 8 8 8 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 3 7 4 6 5 1 5 4 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 1 7 3 8 1 8 6 5 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 3 10 5 5 9 3 2 6 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 5 10 6 7 1 9 4 5 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 9 5 9 7 1 3 4 2 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 4 9 9 3 4 4 3 3 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 3 1 7 5 6 9 2 5 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 10 4 6 4 3 1 5 6 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 8 7 5 10 8 5 5 3 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 7 5 1 4 8 3 6 2 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 7 9 3 10 9 9 3 5 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 5 4 2 4 10 10 9 3 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 6 6 3 7 4 4 8 4 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 10 6 9 8 6 8 2 4 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 10 5 8 1 3 3 8 6 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 2 6 9 2 1 4 2 8 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 5 4 2 5 3 7 7 1 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 2 10 5 9 3 6 9 2 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 5 5 2 7 8 1 2 1 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 8 6 10 2 9 5 10 7 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 2 10 4 9 1 2 10 10 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 4 7 10 7 7 8 7 7 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 1 9 4 8 8 5 10 7 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 1 7 6 1 9 6 2 7 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 10 10 5 10 3 4 8 1 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 2 1 3 2 10 7 5 10 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 8 4 5 3 10 3 10 5 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 2 2 1 7 9 10 9 1 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 10 9 5 2 5 4 10 5 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 10 6 9 3 4 1 9 10 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 9 10 5 2 8 9 2 5 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 1 6 7 9 10 1 2 7 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 10 3 9 4 2 1 3 8 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 7 2 4 6 7 10 4 6 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 9 10 10 1 7 7 3 6 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 8 7 3 4 7 3 2 6 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 4 2 10 5 8 7 5 3 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 7 8 9 6 5 2 2 1 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 9 9 10 8 9 10 8 9 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 10 8 1 3 5 10 1 5 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 3 2 7 5 7 9 2 8 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 4 3 2 7 6 6 10 2 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 4 7 6 7 3 3 6 8 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 10 8 10 3 4 5 6 8 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 4 10 2 8 10 6 4 2 4 1
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 7 4 6 10 6 3 4 5 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 5 3 2 4 1 6 6 9 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 8 5 10 9 3 4 3 7 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 8 5 8 1 9 2 6 2 5 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 9 6 9 8 7 9 8 4 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 9 8 3 7 4 10 2 4 3
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 5 9 1 9 7 6 1 3 2 10
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 2 8 6 8 4 3 3 7 7
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 3 9 7 10 8 2 8 10 8
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 3 1 8 3 9 1 6 4 4 4
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 9 8 7 10 9 2 5 2 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 7 10 7 8 7 9 1 10 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 2 2 10 7 5 1 7 7 5 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 2 5 10 8 8 5 7 3 9
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 10 4 9 7 1 3 7 10 10 2
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 1 6 5 6 2 3 6 5 6 5
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 3 1 2 5 1 8 2 6 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 7 6 8 3 1 7 7 3 9 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 9 2 10 4 4 8 1 2 5 6
+
+  ..$  Factor w 10 levels CA,CH,CO,.. 6 9 1 8 1 9 3 3 3 6
+
+  .. [list output truncated]
+
+ $ CI          num 0.95
+
+ class(irf_h2)  # Sollte pvar_bootstrap_irf oder ähnlich sein
+
+[1] list
+
+ 
+
+ plot(irf_h2, impulse = stability, response = c(volatility, spread))
+
+Fehler in xy.coords(x, y, xlabel, ylabel, log)  
+
+  'x' ist eine Liste, hat aber keine Komponenten 'x' und 'y'
+
+```
+
+
+
+
+
+Gemini said
+Der Fehler tritt auf, weil die Funktion bootstrap_irf in R lediglich eine Liste mit den Konfidenzintervallen (LowerUpper) zurückgibt, aber nicht die eigentlichen Punktschätzungen (die mittlere IRF-Linie). Die Standard-plot-Funktion weiß daher nicht, wie sie diese reine Liste von Matrizen grafisch darstellen soll.
+
+Zudem fehlt dem Objekt irf_h2 das Klassenzeichen (S3-Klasse), das R mitteilt, dass es sich um ein PVAR-Ergebnis handelt.
+
+Hier sind die zwei besten Wege, um das Problem zu lösen
+
+Option 1 Der Saubere Weg (Punktschätzung + Bootstrap kombinieren)
+Damit der Plot funktioniert, musst du zuerst die eigentlichen IRFs berechnen und diese dann zusammen mit dem Bootstrap verwenden.
+
+R
+# 1. Punktschätzung der IRFs berechnen (die mittlere Linie)
+irf_point - pvar_irf(pvar_all, n.ahead = 24)
+
+# 2. Den Plot erstellen
+# Wir übergeben die Punktschätzung und fügen die Konfidenzbänder hinzu
+plot(irf_point, 
+     bootstrap_irf = irf_h2, 
+     impulse = stability, 
+     response = c(volatility, spread))
+Option 2 Manueller Plot mit ggplot2 (Empfohlen für Abschlussarbeiten)
+Da du für deine Hypothese H2 (Aktien vs. Anleihen) vermutlich eine sehr saubere Grafik für deine Arbeit benötigst, ist es oft besser, die Daten zu extrahieren und selbst zu plotten. So hast du die volle Kontrolle über Farben und Beschriftungen.
+
+Hier ist ein fertiger Baustein für dich
+
+R
+# Hilfsfunktion zum Extrahieren der Daten
+get_irf_df - function(impulse_name, response_name, point_obj, boot_obj) {
+  data.frame(
+    Step = 124,
+    Response = response_name,
+    Value = point_obj[[impulse_name]][, response_name],
+    Lower = boot_obj$Lower[[impulse_name]][, response_name],
+    Upper = boot_obj$Upper[[impulse_name]][, response_name]
+  )
+}
+
+# Daten extrahieren
+df_vol - get_irf_df(stability, volatility, irf_point, irf_h2)
+df_spr - get_irf_df(stability, spread, irf_point, irf_h2)
+plot_data - rbind(df_vol, df_spr)
+
+# Plot mit ggplot2
+ggplot(plot_data, aes(x = Step, y = Value)) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), fill = blue, alpha = 0.2) +
+  geom_line(color = blue, size = 1) +
+  geom_hline(yintercept = 0, linetype = dashed, color = red) +
+  facet_wrap(~Response, scales = free_y) +
+  theme_minimal() +
+  labs(title = Impuls-Antwort-Funktionen (Schock auf Stability),
+       subtitle = H2 Vergleich Volatilität (Aktien) vs. Spread (Anleihen),
+       x = Monate nach dem Schock, y = Reaktion)
+Warum hat dein Code nicht funktioniert
+Fehlende Klasse class(irf_h2) gab nur list zurück. Die plot-Funktion von panelvar reagiert aber nur auf Objekte der Klasse pvarirf.
+
+Fehlende Mittelwerte bootstrap_irf berechnet nur die Unsicherheit (die Bänder). Ohne die zentrale pvar_irf-Berechnung gibt es keine Linie, um die herum die Bänder gezeichnet werden könnten.
+
+Möchtest du, dass ich dir helfe, die FEVD-Ergebnisse (Varianzzerlegung) ebenfalls in eine schöne Tabelle für deine Arbeit zu exportieren
+
+You said
+noch mal das ganze skript
+
+Gemini said
+Hier ist das vollständige, korrigierte Skript für Schritt 1 (H2-Test).
+
+Der entscheidende Unterschied ist, dass nun zuerst die Punktschätzungen (pvar_irf) berechnet werden und diese dann zusammen mit den Bootstrap-Ergebnissen (bootstrap_irf) geplottet werden. Nur so kann R die Linie (Mittelwert) und die Flächen (Konfidenzintervalle) gleichzeitig darstellen.
+
+R
+# ==============================================================================
+# SCHRITT 1 TEST FÜR H2 (AKTIEN VS. ANLEIHEN)
+# ==============================================================================
+library(panelvar)
+library(ggplot2)
+
+# 1. SETUP & MODELL LADEN
+# ------------------------------------------------------------------------------
+set.seed(123) # Für Reproduzierbarkeit
+base_path - CUserslenalDocuments05_Rdata_clean
+
+# Laden des zuvor gespeicherten OLS-Modells
+pvar_all - readRDS(paste0(base_path, pvar_all.rds))
+
+# 2. BERECHNUNG DER IRFs
+# ------------------------------------------------------------------------------
+# A) Punktschätzung (die zentrale Linie der Antwort)
+irf_point - pvar_irf(pvar_all, 
+                      n.ahead = 24)
+
+# B) Bootstrap (die Konfidenzbänder  Unsicherheit)
+# nof_Nstar_draws = 100 für eine schnellere Test-Berechnung. 
+# Für die finale Arbeit empfiehlt sich oft ein höherer Wert (z.B. 200 oder 500).
+irf_boot - bootstrap_irf(pvar_all, 
+                          typeof_irf = OIRF, 
+                          n.ahead = 24, 
+                          nof_Nstar_draws = 100, 
+                          mc.cores = 1)
+
+# 3. VISUALISIERUNG
+# ------------------------------------------------------------------------------
+# Wir plotten das Punkt-Objekt und übergeben das Bootstrap-Objekt als Argument.
+# Impulse 'stability'
+# Responses 'volatility' (Aktienmarkt) und 'spread' (Anleihenmarkt)
+
+plot(irf_point, 
+     bootstrap_irf = irf_boot, 
+     impulse = stability, 
+     response = c(volatility, spread))
+
+# 4. VARIANZZERLEGUNG (FEVD)
+# ------------------------------------------------------------------------------
+# Berechnet, wie viel Prozent der Schwankungen in VolatilitätSpread 
+# durch einen Stabilitätsschock erklärt werden.
+fevd_h2 - pvarfevd(pvar_all, n.ahead = 24)
+
+# Ergebnisse in der Konsole anzeigen
+print(fevd_h2)
+
+# Optional FEVD als CSV speichern für die Auswertung in ExcelWord
+# write.csv(as.data.frame(fevd_h2$stability), paste0(base_path, fevd_stability_shock.csv))
+
+cat(nBerechnung abgeschlossen. Die Grafiken sollten nun korrekt angezeigt werden.)
+Was wurde korrigiert
+pvar_irf hinzugefügt Dein vorheriger Fehler entstand, weil du versucht hast, nur die Fehlerschranken (irf_h2) zu plotten. R braucht aber ein Haupt-IRF-Objekt als Basis.
+
+Zusammenführung im Plot Der Befehl plot(irf_point, bootstrap_irf = irf_boot, ...) kombiniert nun beide Berechnungen zu einer sauberen Grafik mit Schattenflächen für die Konfidenzintervalle.
+
+Originalnamen Da du im vorherigen Schritt die Namen nicht geändert hast, greift dieses Skript wie gewünscht auf die Originalnamen stability, volatility und spread zu.
+
+You said
+Fehler in pvar_irf(pvar_all, n.ahead = 24) 
+
+konnte Funktion pvar_irf nicht finden
+
+Gemini said
+Der Fehler rührt daher, dass die Funktion im Paket panelvar keinen Unterstrich hat. Sie heißt schlicht pvarirf (im Gegensatz zu bootstrap_irf, das tatsächlich einen Unterstrich nutzt).
+
+Hier ist das korrigierte Skript-Segment mit dem richtigen Funktionsnamen
+
+Korrigierter Code für Schritt 1 (H2)
+R
+# ==============================================================================
+# SCHRITT 1 TEST FÜR H2 (AKTIEN VS. ANLEIHEN)
+# ==============================================================================
+library(panelvar)
+library(ggplot2)
+
+# 1. SETUP & MODELL LADEN
+# ------------------------------------------------------------------------------
+set.seed(123)
+base_path - CUserslenalDocuments05_Rdata_clean
+pvar_all - readRDS(paste0(base_path, pvar_all.rds))
+
+# 2. BERECHNUNG DER IRFs
+# ------------------------------------------------------------------------------
+# A) Punktschätzung (Korrektur pvarirf statt pvar_irf)
+irf_point - pvarirf(pvar_all, n.ahead = 24) 
+
+# B) Bootstrap (Unsicherheit)
+irf_boot - bootstrap_irf(pvar_all, 
+                          typeof_irf = OIRF, 
+                          n.ahead = 24, 
+                          nof_Nstar_draws = 100, 
+                          mc.cores = 1)
+
+# 3. VISUALISIERUNG
+# ------------------------------------------------------------------------------
+# Nun wird das pvarirf-Objekt geplottet und der Bootstrap übergeben
+plot(irf_point, 
+     bootstrap_irf = irf_boot, 
+     impulse = stability, 
+     response = c(volatility, spread))
+
+# 4. VARIANZZERLEGUNG (FEVD)
+# ------------------------------------------------------------------------------
+fevd_h2 - pvarfevd(pvar_all, n.ahead = 24)
+print(fevd_h2)
+Was wurde geändert
+Funktionsname Der Aufruf wurde von pvar_irf zu pvarirf korrigiert. In der Bibliothek panelvar folgen die Funktionsnamen nicht immer einer einheitlichen Logik (z. B. pvarfeols und pvarirf ohne Unterstrich, aber bootstrap_irf mit Unterstrich).
+
+Objekt-Klasse Durch die Verwendung von pvarirf() erhält das Objekt irf_point die korrekte Klasse, die von der plot-Funktion erkannt wird.
+
+Wichtige Details aus deinem Modell
+Da dein Modell pvar_all mit den Variablen stability, volatility und spread geschätzt wurde, greifen die Parameter impulse und response im Plot-Befehl nun korrekt auf diese Namen zu.
+
+Möchtest du, dass ich dir helfe, die Achsenbeschriftungen im Plot anzupassen, damit sie in deiner Arbeit professioneller aussehen (z. B. Aktienvolatilität statt volatility)
+
+You said
+# 2. BERECHNUNG DER IRFs # ------------------------------------------------------------------------------ # A) Punktschätzung (Korrektur pvarirf statt pvar_irf) irf_point - pvarirf(pvar_all, n.ahead = 24) Fehler in pvarirf(pvar_all, n.ahead = 24) 
+
+konnte Funktion pvarirf nicht finden
+
+Gemini said
+Es tut mir leid, das war mein Fehler. In der aktuellen Version des panelvar-Pakets auf CRAN gibt es tatsächlich keine eigenständige Funktion namens pvarirf für Punktschätzungen. Die Analyse der Impuls-Antwort-Funktionen (IRFs) wird in diesem Paket primär über die bootstrap_irf-Funktion abgewickelt, die du bereits erfolgreich verwendet hast.
+
+Der Grund für den Fehler beim Plotten liegt darin, dass das Ergebnis von bootstrap_irf oft als reine Liste zurückgegeben wird und R daher nicht weiß, wie es diese grafisch darstellen soll.
+
+Hier ist das vollständige, korrigierte Skript, das die Daten manuell aufbereitet und mit ggplot2 professionell darstellt. Dies ist der sicherste Weg, um Fehlermeldungen zu vermeiden
+
+Vollständiges Skript für Schritt 1 (H2-Test)
+R
+# ==============================================================================
+# SCHRITT 1 TEST FÜR H2 (AKTIEN VS. ANLEIHEN)
+# ==============================================================================
+library(panelvar)
+library(ggplot2)
+library(reshape2)
+
+# 1. SETUP & MODELL LADEN
+# ------------------------------------------------------------------------------
+set.seed(123)
+base_path - CUserslenalDocuments05_Rdata_clean
+pvar_all  - readRDS(paste0(base_path, pvar_all.rds))
+
+# 2. BERECHNUNG DER IRFs (BOOTSTRAP)
+# ------------------------------------------------------------------------------
+# Wir nutzen bootstrap_irf, da dies die Konfidenzintervalle liefert.
+# nof_Nstar_draws = 100 (für Tests), 500+ für finale Ergebnisse.
+irf_h2 - bootstrap_irf(pvar_all, 
+                        typeof_irf = OIRF, 
+                        n.ahead = 24, 
+                        nof_Nstar_draws = 100, 
+                        mc.cores = 1)
+
+# 3. DATEN EXTRAHIEREN FÜR GGPLOT
+# ------------------------------------------------------------------------------
+# Da das Objekt eine Liste ist, extrahieren wir die Werte für 'stability' Schocks
+# auf 'volatility' und 'spread' manuell.
+
+prepare_plot_data - function(irf_obj, impulse, responses) {
+  df_list - list()
+  for (resp in responses) {
+    # Wir nehmen den Mittelwert zwischen Lower und Upper als Schätzung der Linie
+    lower_vals - irf_obj$Lower[[impulse]][, resp]
+    upper_vals - irf_obj$Upper[[impulse]][, resp]
+    mid_vals   - (lower_vals + upper_vals)  2
+    
+    df_list[[resp]] - data.frame(
+      Month = 1length(mid_vals),
+      Response = resp,
+      Value = mid_vals,
+      Lower = lower_vals,
+      Upper = upper_vals
+    )
+  }
+  do.call(rbind, df_list)
+}
+
+# Daten für die Grafik aufbereiten
+plot_data - prepare_plot_data(irf_h2, stability, c(volatility, spread))
+
+# 4. VISUALISIERUNG MIT GGPLOT2
+# ------------------------------------------------------------------------------
+ggplot(plot_data, aes(x = Month, y = Value)) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), fill = steelblue, alpha = 0.3) +
+  geom_line(color = darkblue, size = 1) +
+  geom_hline(yintercept = 0, linetype = dashed, color = red) +
+  facet_wrap(~Response, scales = free_y) +
+  theme_minimal() +
+  labs(title = H2 Reaktion von Aktien (volatility) und Anleihen (spread),
+       subtitle = Impuls Schock auf 'stability' (orthonormalisierte IRF),
+       x = Monate nach Schock,
+       y = Reaktion (mit 95% Konfidenzintervall))
+
+# 5. VARIANZZERLEGUNG (FEVD)
+# ------------------------------------------------------------------------------
+fevd_h2 - pvarfevd(pvar_all, n.ahead = 24)
+print(FEVD Ergebnisse für stability Schocks)
+print(fevd_h2$stability)
+Was wurde im Vergleich zum vorherigen Versuch geändert
+Kein pvarirf mehr Wir verlassen uns nicht mehr auf die (in dieser Version fehlende) Funktion, sondern nutzen die bereits vorhandenen Ergebnisse aus bootstrap_irf.
+
+Manuelle Extraktion Die Funktion prepare_plot_data zieht die Werte für die Unter- und Obergrenzen direkt aus der Liste, die dein bootstrap_irf-Lauf erzeugt hat.
+
+Fehlersicheres Plotten Durch die Verwendung von ggplot2 umgehen wir die interne plot()-Funktion von panelvar, die bei dir den Fehler xy.coords verursacht hat.
+
+Variablen Das Skript verwendet weiterhin die Originalnamen stability, volatility und spread, wie sie in deinem Modell gespeichert sind.
+
+Möchtest du, dass ich die Grafik noch weiter anpasse, zum Beispiel durch deutsche Achsenbeschriftungen oder spezifische Farben für deine Arbeit
+

@@ -1,0 +1,551 @@
+You said
+in cips werden ja lags angenommen. testet der cips nach Pesaran 2007 automatisch die  infokriterien ?
+
+
+
+das ist das skript setwd(CUserslenalDocuments05_Rdata_clean)
+
+
+
+library(CADFtest)
+
+library(readr)
+
+library(dplyr)
+
+library(tidyr)
+
+
+
+data - read_csv(data_all.csv)
+
+
+
+countries - unique(data$country)
+
+cips_results - data.frame(Variable = character(), CIPS_Statistik = numeric())
+
+
+
+vars_to_test - c(stability, volatility, spread, inflation, reserves, ex_rate)
+
+
+
+for (var in vars_to_test) {
+
+  cadf_stats - c()
+
+  
+
+  for (country in countries) {
+
+    country_data - data %% filter(country == !!country) %% pull(!!var)
+
+    country_data - na.omit(country_data)
+
+    
+
+    # max.lag.y = 4 
+
+    test_cadf - CADFtest(country_data, type = drift, max.lag.y = 4, criterion = AIC)
+
+    
+
+    cadf_stats - c(cadf_stats, test_cadf$statistic)
+
+  }
+
+  
+
+  cips_stat - mean(cadf_stats, na.rm = TRUE)
+
+  
+
+  cips_results - rbind(cips_results, data.frame(Variable = var, CIPS_Statistik = cips_stat))
+
+}
+
+
+
+print
+
+print(cips_results)
+
+
+
+
+
+
+
+
+
+
+
+write_csv(cips_results, cips_final_results.csv)
+
+Gemini said
+Um deine Frage direkt zu beantworten Nein, du musst AICBIC nicht vorher separat testen. Das macht dein Skript bereits automatisch innerhalb der Schleife für jedes Land.
+
+Hier ist die detaillierte Erklärung, was in deinem Code passiert und worauf du bei der Interpretation für deine Arbeit achten musst
+
+1. Die automatische Lag-Wahl in deinem Skript
+In der Zeile test_cadf - CADFtest(..., max.lag.y = 4, criterion = AIC) passiert Folgendes
+
+max.lag.y = 4 Dies ist die Obergrenze. Der Test schaut sich Modelle mit 0, 1, 2, 3 und 4 Lags an.
+
+criterion = AIC Das Programm berechnet für jede dieser 5 Lag-Längen das Modell und vergleicht den AIC-Wert. Es wählt dann automatisch den Lag, der den niedrigsten (besten) AIC hat, und nutzt diesen für die Statistik.
+
+Wichtig für deine Methodik Du musst in Kapitel 3.7.1 erwähnen, dass die Lag-Länge für die Stationaritätstests länderindividuell auf Basis des Akaike-Informationskriteriums (AIC) bestimmt wurde, um serielle Korrelation in den Residuen der Test-Gleichungen zu vermeiden.
+
+2. Kritisches Feedback zu deinem CIPS-Skript
+Dein Skript hat ein methodisches Problem, wenn du es als CIPS (Cross-sectionally Augmented Pesaran-Shin) verkaufen möchtest.
+
+Das Problem Der CIPS-Test nach Pesaran (2007) verlangt, dass in die Regression jedes Landes der Querschnittsdurchschnitt (Cross-sectional Mean) der Variablen aufgenommen wird, um die Abhängigkeit zwischen den Ländern (Cross-Sectional Dependence) zu kontrollieren.
+
+In deinem aktuellen Loop machst du lediglich einen IPS-Test (Im-Pesaran-Shin) auf Basis einzelner CADF-Tests, ohne dass die Länder voneinander wissen.
+
+So müsste ein echter CIPS-Logikschritt aussehen
+
+Berechne für jeden Zeitpunkt t den Durchschnitt der Variable über alle 10 Länder ( 
+y
+ˉ
+​
+  
+t
+​
+ ).
+
+Füge diesen Durchschnitt (und seine Lags) als zusätzliche Regressoren in den Test für jedes einzelne Land ein.
+
+Bilde dann den Mittelwert der Teststatistiken.
+
+3. Empfohlene Korrektur für dein R-Skript
+Damit dein Test statistisch wasserdicht ist und die Cross-Sectional Dependence wirklich berücksichtigt, solltest du die Variable erst augmentieren. Hier ist ein vereinfachter Weg, wie du das in deinem Loop integrieren kannst
+
+R
+# Vor der Schleife Querschnittsmittelwerte berechnen
+data - data %%
+  group_by(date) %% # oder 'year', je nach Zeitspalte
+  mutate(across(vars_to_test, ~mean(., na.rm = TRUE), .names = mean_{.col})) %%
+  ungroup()
+
+# In der Schleife für das Land
+for (var in vars_to_test) {
+  mean_var - paste0(mean_, var) # Name des Durchschnitts
+  
+  for (country in countries) {
+    country_data - data %% filter(country == !!country)
+    
+    # Hier nutzt du CADFtest mit dem Querschnittsdurchschnitt als Kovariate (X)
+    y - na.omit(country_data[[var]])
+    ext_obs - na.omit(country_data[[mean_var]])
+    
+    # Der echte CIPS-Ansatz nutzt den Durchschnitt als exogene Hilfe
+    test_cadf - CADFtest(y, X = ext_obs, type = drift, max.lag.y = 4, criterion = AIC)
+    # ... Rest deines Skripts
+  }
+}
+Zusammenfassung für dein Kapitel 3.7.1
+Lags Werden automatisch via AIC selektiert (keine Vorarbeit nötig).
+
+Begründung Die automatische Selektion stellt sicher, dass für jedes Land die optimale Dynamik berücksichtigt wird, um verzerrte Teststatistiken zu vermeiden.
+
+CIPS vs. IPS Wenn du dein aktuelles Skript (ohne Querschnittsdurchschnitt) behältst, nenne es in der Arbeit lieber einen Panel-ADF-Test (IPS-Typ). Wenn du die Durchschnittswerte einbaust, darfst du es CIPS-Test nach Pesaran (2007) nennen.
+
+Soll ich dir eine Tabelle für deine Arbeit erstellen, in der du die kritischen Werte für den CIPS-Test (die sind nämlich anders als beim normalen ADF-Test) zum Vergleichen deiner Ergebnisse auflisten kannst
+
+You said
+ganzes skript bitte
+
+Gemini said
+Um einen echten CIPS-Test (nach Pesaran, 2007) durchzuführen, müssen wir das Skript so erweitern, dass für jeden Zeitschritt der Durchschnitt aller Länder berechnet und als zusätzliche Information in den Test einbezogen wird. Nur so wird die Cross-Sectional Dependence (Abhängigkeit zwischen den Ländern) statistisch kontrolliert.
+
+Hier ist das vollständige, korrigierte R-Skript
+
+R
+##########################################################################
+# CIPS Unit Root Test (Cross-sectionally Augmented Pesaran-Shin)
+# Basierend auf Pesaran (2007)
+##########################################################################
+
+# 1. Bibliotheken laden
+library(readr)
+library(dplyr)
+library(tidyr)
+library(CADFtest)
+
+# 2. Daten laden
+# Stelle sicher, dass deine CSV eine Zeitspalte (z.B. 'date') und 'country' hat
+data - read_csv(data_all.csv)
+
+# 3. Variablen und Länder definieren
+vars_to_test - c(stability, volatility, spread, inflation, reserves, ex_rate)
+countries - unique(data$country)
+
+# 4. SCHRITT 1 Querschnittsmittelwerte (Cross-sectional Means) berechnen
+# Das ist der Augmented-Teil, der den Test zum CIPS macht.
+data_augmented - data %%
+  group_by(date) %%  # WICHTIG Ersetze 'date' durch den Namen deiner Zeitspalte
+  mutate(across(all_of(vars_to_test), 
+                ~mean(., na.rm = TRUE), 
+                .names = mean_{.col})) %%
+  ungroup()
+
+# 5. SCHRITT 2 Iteration über Variablen und Länder
+cips_results - data.frame(Variable = character(), CIPS_Statistik = numeric())
+
+for (var in vars_to_test) {
+  cadf_stats - c()
+  mean_var_name - paste0(mean_, var) # Name der berechneten Durchschnitts-Variable
+  
+  for (country_name in countries) {
+    # Daten für das spezifische Land filtern
+    country_data - data_augmented %% 
+      filter(country == country_name) %%
+      arrange(date) # Zeitliche Reihenfolge sicherstellen
+    
+    # Zeitreihen vorbereiten (NAs entfernen)
+    y - country_data[[var]]
+    y_bar - country_data[[mean_var_name]]
+    
+    # Sicherstellen, dass keine NAs die Berechnung stoppen
+    valid_indices - which(!is.na(y) & !is.na(y_bar))
+    y_clean - y[valid_indices]
+    y_bar_clean - y_bar[valid_indices]
+    
+    # 6. SCHRITT 3 CADF-Test pro Land durchführen
+    # X = y_bar_clean fügt den Querschnittsdurchschnitt als exogene Variable hinzu
+    # criterion = AIC wählt die Lags automatisch (max. 4)
+    test_result - CADFtest(y_clean, 
+                            X = y_bar_clean, 
+                            type = drift, 
+                            max.lag.y = 4, 
+                            criterion = AIC)
+    
+    # Teststatistik (t-Wert) speichern
+    cadf_stats - c(cadf_stats, test_result$statistic)
+  }
+  
+  # 7. SCHRITT 4 Mittelwert der Statistiken bilden (= CIPS Statistik)
+  cips_stat - mean(cadf_stats, na.rm = TRUE)
+  
+  cips_results - rbind(cips_results, 
+                        data.frame(Variable = var, CIPS_Statistik = cips_stat))
+}
+
+# 8. Ergebnisse anzeigen und speichern
+print(--- Finale CIPS-Testergebnisse ---)
+print(cips_results)
+
+write_csv(cips_results, cips_final_results.csv)
+Was hat sich im Vergleich zu deinem Entwurf geändert
+group_by(date) %% mutate(...) Bevor wir testen, berechnen wir für jeden MonatJahr den Durchschnittswert der Variable über alle 10 Länder hinweg. Das ist der Faktor, der globale Schocks (z.B. Finanzkrise) auffängt, die alle Länder gleichzeitig betreffen.
+
+X = y_bar_clean In der Funktion CADFtest wird dieser Durchschnittswert als exogener Regressor hinzugefügt. Das ist die mathematische Anforderung für den CIPS-Test.
+
+arrange(date) Bei Zeitreihentests ist die korrekte zeitliche Reihenfolge kritisch. Das Skript stellt dies nun sicher.
+
+Wichtiger Hinweis für deine Analyse (Kapitel 4.1.1)
+Die CIPS-Statistik folgt nicht der normalen t-Verteilung und auch nicht der Standard-Dickey-Fuller-Verteilung. Du musst sie mit den kritischen Werten von Pesaran (2007) vergleichen.
+
+Typische kritische Werte für CIPS (N=10,T=100) mit Drift
+
+1% Niveau ca. -2,36
+
+5% Niveau ca. -2,20
+
+10% Niveau ca. -2,11
+
+(Wenn deine Statistik negativer ist als der kritische Wert, ist die Variable stationär).
+
+Möchtest du, dass ich dir eine kleine Ergebnistabelle erstelle, in der du deine berechneten Werte und die kritischen Werte gegenüberstellst, damit du sie direkt in deine Arbeit kopieren kannst
+
+You said
+ich habe die ergebnisse der tabelle geändert. passe die ergebnissanalyse an. nur so viel wie nötig
+
+
+
+
+Variable
+
+
+
+
+
+CIPS
+
+
+
+
+
+5%-Niveau
+
+
+
+
+
+
+
+
+stability     
+
+
+
+
+
+-2.98
+
+
+
+
+
+-2.32
+
+
+
+
+
+
+
+volatility
+
+
+
+
+
+-7.55
+
+
+
+
+
+-2.32
+
+
+
+
+
+
+
+spread
+
+
+
+
+
+-10.43
+
+
+
+
+
+-2.32
+
+
+
+
+
+
+
+inflation
+
+
+
+
+
+-8.58
+
+
+
+
+
+-2.32
+
+
+
+
+
+
+
+reserves
+
+
+
+
+
+-11.05
+
+
+
+
+
+-2.33
+
+
+
+
+
+
+
+ex_rate
+
+
+
+
+
+-10.91
+
+
+
+
+
+-2.33
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Die Ergebnisse des
+
+CIPS-Tests werden mithilfe der bereitgestellten Tabellen II(b)
+
+in Pesaran (2007) abgeglichen. Die
+
+kritischen Schwellenwerte wurden entsprechend der Stichprobengröße (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+) gewählt. Für
+
+Modelle mit Intercept (Case II) beträgt der kritische Wert auf dem 5 %-Niveau etwa
+
+-2.32 (Pesaran, 2007, S. 280 f).
+
+Die Testergebnisse (siehe Tabelle 3.10) zeigen, dass ein
+
+Großteil der Daten bereits stationär ist. Die Variablen volatility,
+
+spread, inflation, reserves und ex_rate liegen deutlich unter den
+
+kritischen Werten. Sie können daher ohne weitere Änderungen verwendet werden. Ein Sonderfall ist die politische Stabilität.
+
+Mit einem Wert von -2,24 liegt sie ganz knapp über dem Schwellenwert.
+
+Statistisch gesehen ist sie damit grenzwertig. Trotzdem wird die Variable in
+
+ihrer ursprünglichen Form im Modell belassen, da die
+
+zugrundeliegenden Indizes (FSI und WGI) eine feste Skala haben. Mathematisch
+
+können diese Werte nicht unendlich steigen oder fallen, was einen echten
+
+Zufallstrend (Random Walk) theoretisch ausschließt. Eine Differenzierung würde keinen
+
+statistischen Mehrwert bieten. Somit wird für alle Variablen Stationarität 
+
+ angenommen.
+
+Gemini said
+Da sich deine Werte geändert haben, ist die Argumentation nun deutlich einfacher Alle Variablen sind jetzt statistisch signifikant stationär. Der Sonderfall bei der politischen Stabilität fällt weg, da der Wert von -2,98 nun klar unter dem kritischen Schwellenwert von -2,32 liegt.
+
+Hier ist die angepasste Analyse
+
+Die Ergebnisse des CIPS-Tests werden mithilfe der Tabellen II(b) in Pesaran (2007) abgeglichen. Die kritischen Schwellenwerte wurden entsprechend der Stichprobengröße (N=10,T=120) gewählt. Für Modelle mit Intercept (Case II) beträgt der kritische Wert auf dem 5 %-Niveau etwa -2,32 bis -2,33 (Pesaran, 2007, S. 280 f).
+
+Die Testergebnisse (siehe Tabelle 3.10) zeigen, dass sämtliche Variablen im Niveau stationär sind. Die Teststatistiken für Volatilität, Spread, Inflation, Reserven und den Wechselkurs liegen extrem deutlich unter den kritischen Werten. Im Gegensatz zu vorherigen Schätzungen ist nun auch die politische Stabilität mit einem Wert von -2,98 eindeutig als stationär einzustufen, da sie den kritischen Schwellenwert signifikant unterschreitet.
+
+Damit kann die Nullhypothese einer Einheitswurzel für alle Zeitreihen verworfen werden. Eine Differenzierung der Daten ist nicht erforderlich, weshalb alle Variablen in ihrer ursprünglichen Form im PVAR-Modell verwendet werden. Somit wird für den weiteren Untersuchungsverlauf durchgehend Stationarität angenommen.
+
+Was wurde konkret geändert
+
+Eindeutigkeit Der Hinweis auf den Sonderfall und das knappe Ergebnis bei der Stabilität wurde entfernt, da -2,98 ein statistisch klares Ergebnis ist.
+
+Präzision Die kritischen Werte wurden als Bereich (-2,32 bis -2,33) angegeben, da dies exakter für deine NT-Konstellation bei Pesaran ist.
+
+Streichung Die theoretische Begründung (FSIWGI-Skala) ist nun nicht mehr zwingend notwendig, da die Statistik die Stationarität bereits belegt. Ich habe sie gestrichen, um den Text so kurz wie nötig zu halten.
+
+Soll ich dir als Nächstes dabei helfen, die Interpretation der optimalen Lag-Länge (Kapitel 4.1.2) auf Basis dieser stationären Daten zu formulieren
+
+You said
+kein vergleich mit vorher
+
+Gemini said
+Hier ist die bereinigte Ergebnisanalyse, ohne Vergleiche zu vorherigen Versionen oder hypothetische Sonderfälle, da die Statistik nun für alle Variablen eindeutig ist.
+
+4.1.1. Ergebnisse des CIPS-Stationaritätstests
+Die Ergebnisse des CIPS-Tests werden mithilfe der Tabellen II(b) in Pesaran (2007) abgeglichen. Die kritischen Schwellenwerte wurden entsprechend der Stichprobengröße (N=10,T=120) gewählt. Für Modelle mit Intercept (Case II) beträgt der kritische Wert auf dem 5 %-Niveau etwa -2,32 (Pesaran, 2007, S. 280 f).
+
+Die Testergebnisse (siehe Tabelle 3.10) belegen, dass sämtliche Variablen bereits im Niveau stationär sind. Die Teststatistiken für stability, volatility, spread, inflation, reserves und ex_rate liegen allesamt deutlich unter dem kritischen Schwellenwert. Damit kann die Nullhypothese einer Einheitswurzel (Unit Root) für alle Zeitreihen auf dem 5 %-Signifikanzniveau verworfen werden.
+
+Da die Stationarität für alle Variablen bestätigt wurde, ist keine Transformation der Daten durch Differenzbildung erforderlich. Dies ermöglicht die Verwendung der Variablen in ihrer ursprünglichen Form im weiteren PVAR-Modell, wodurch die langfristigen Informationen der Daten erhalten bleiben.
+
+Was wurde angepasst
+Verzichts auf Vergleiche Formulierungen wie „nun auch“ oder „im Gegensatz zu“ wurden konsequent entfernt.
+
+Fokus auf das aktuelle Ergebnis Da alle Werte (inklusive der politischen Stabilität mit -2,98) signifikant sind, wird das Ergebnis als einheitlich und stabil präsentiert.
+
+Kürzung Die theoretische Hilfsargumentation zur Skala von FSIWGI wurde entfernt, da die statistische Evidenz (-2,98  -2,32) bereits ausreicht, um den Prüfer zu überzeugen.
+
+Soll ich dir zeigen, wie du nun die Bestimmung der optimalen Lag-Länge (Kapitel 4.1.2) basierend auf diesen stationären Daten beschreibst
+
+You said
+muss ich jetzt noch extra die lag länge bestimmen oder wurde das schon mitgemacht in cips
+
+Gemini said
+Das ist eine sehr wichtige methodische Unterscheidung Ja, du musst die Lag-Länge für das PVAR-Modell jetzt noch einmal separat bestimmen.
+
+Die Lag-Wahl im CIPS-Test und die Lag-Wahl im PVAR-Modell verfolgen unterschiedliche Ziele und nutzen unterschiedliche Datenstrukturen.
+
+Warum die CIPS-Lags nicht für das PVAR reichen
+Univariat vs. Multivariate Im CIPS-Test prüfst du jede Variable einzeln (oder nur mit ihrem Querschnittsdurchschnitt), um sicherzustellen, dass die Fehlerterme der Testgleichung weißes Rauschen sind. Im PVAR betrachtest du ein System, in dem alle Variablen gleichzeitig interagieren.
+
+Einheitlichkeit Im CIPS-Test darf (und sollte) jedes Land und jede Variable eine eigene optimale Lag-Länge haben. In einem Standard-PVAR-Modell muss die Lag-Länge p jedoch für das gesamte System und alle Länder einheitlich sein, um die Schätzungen vergleichbar und das Modell berechenbar zu machen.
+
+So gehst du in Kapitel 4.1.2 vor
+Für das PVAR-Modell nutzt du spezielle Auswahlkriterien für Panel-Modelle. In der Literatur (z. B. Abrigo & Love, 2016) werden hierfür die von Andrews und Lu (2001) entwickelten Kriterien verwendet, die auf der J-Statistik basieren.
+
+Du testest üblicherweise eine Spanne von Lags (z. B. Lag 1 bis Lag 3) und vergleichst drei Werte
+
+MBIC (Modified Bayesian Information Criterion)
+
+MAIC (Modified Akaike Information Criterion)
+
+MQIC (Modified Hannan-Quinn Information Criterion)
+
+Die Regel Du wählst die Lag-Länge, bei der diese Kriterien (insbesondere das MBIC) ihren kleinsten Wert haben.
+
+Beispiel für deine Formulierung in Kapitel 4.1.2
+„Nachdem die Stationarität der Variablen bestätigt wurde, erfolgt die Bestimmung der optimalen Lag-Länge p für das PVAR-System. Im Gegensatz zum CIPS-Test, bei dem die Lags zur Bereinigung der Test-Residuen individuell gewählt wurden, erfordert das PVAR-Modell eine systemweite einheitliche Lag-Struktur. Basierend auf den Auswahlkriterien von Andrews und Lu (2001) wurden das MBIC, MAIC und MQIC für verschiedene Lag-Spezifikationen berechnet. Das Ergebnis (siehe Tabelle 4.2) zeigt, dass bei einem Lag von p=1 [oder dein Ergebnis] das MBIC minimiert wird. Diese Lag-Länge wird daher für die finale Modellspezifikation gewählt, um ein ausgewogenes Verhältnis zwischen Modellgüte und Sparsamkeit (Parsimonie) zu gewährleisten.“
+
+Zusammenfassung des Ablaufs
+CIPS (erledigt) Lags wurden nur benutzt, um die Stationarität korrekt zu testen.
+
+PVAR-Lag-Test (jetzt) Du führst einen Test für das gesamte System durch (in Stata wäre das der Befehl pvarsoc).
+
+Finale Schätzung Mit diesem einen optimalen Lag schätzt du dann dein Modell.
+
+Soll ich dir zeigen, wie du die Ergebnistabelle für die Lag-Längen-Auswahl (MBICMAICMQIC) aufbauen musst, damit sie professionell aussieht

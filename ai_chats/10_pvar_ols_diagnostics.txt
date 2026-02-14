@@ -1,0 +1,63 @@
+das ist der dateipfad: "C:\Users\lenal\Documents\05_R\data_clean\data_all.csv"
+
+Gemini said
+Hier ist der fertige R-Code, um deine Daten zu laden, das Modell final zu schätzen und es für die weitere Analyse sicher zu speichern. Ich habe den Dateipfad direkt so eingebaut, dass R unter Windows keine Probleme mit den Backslashes bekommt.
+
+R-Skript: Finale Schätzung und Speicherung
+R
+# --- 1. SETUP & DATEN LADEN ---
+library(panelvar)
+
+# Pfad definieren (Beachte die doppelten Backslashes oder Vorwärts-Slashes für R)
+file_path <- "C:/Users/lenal/Documents/05_R/data_clean/data_all.csv"
+
+# Daten einlesen
+data_all <- read.csv(file_path)
+
+# WICHTIG: Daten sortieren, damit die Zeitreihenlogik für p=2 stimmt
+data_all <- data_all[order(data_all$country, data_all$date), ]
+
+# --- 2. FINALE MODELLSCHÄTZUNG (PVAR 2) ---
+# Reihenfolge basierend auf Granger-Exogenität: 
+# Stability -> Volatility -> Spread -> Inflation -> Reserves -> Ex_Rate
+dep_vars <- c("stability", "volatility", "spread", "inflation", "reserves", "ex_rate")
+
+cat("Starte finale Schätzung des PVAR(2) Modells...\n")
+
+pvar_final <- pvarfeols(
+  dependent_vars = dep_vars,
+  lags = 2,
+  transformation = "demean",
+  data = data_all,
+  panel_identifier = c("country", "date")
+)
+
+# Zusammenfassung anzeigen
+summary(pvar_final)
+
+# --- 3. SPEICHERN FÜR SPÄTER ---
+# Wir speichern das Modell als .rds Datei im selben Ordner wie deine Daten
+save_path <- "C:/Users/lenal/Documents/05_R/data_clean/pvar_final_model.rds"
+saveRDS(pvar_final, file = save_path)
+
+cat("Modell wurde erfolgreich unter", save_path, "gespeichert.\n")
+Warum das RDS-Format die beste Wahl ist:
+
+Objekt-Erhalt: Im Gegensatz zu .csv speichert .rds das gesamte "Gehirn" deines Modells (Koeffizienten, Residuen, Matrix-Strukturen).
+
+Schnelligkeit: Du musst nie wieder warten, bis das Modell rechnet. Ein einfacher Befehl lädt den fertigen Zustand.
+
+Namensfreiheit: Du kannst das geladene Objekt beim Einlesen nennen, wie du willst (z.B. m <- readRDS(...)).
+
+Methodischer Check für deine Dokumentation
+Da du nun die finale Schätzung vornimmst, kannst du dies in deiner Arbeit wie folgt begründen:
+
+
+Schätzmethode: Die Schätzung erfolgt mittels OLS (Within-Transformation). Da deine Zeitreihe T=124 Monate umfasst, ist der bei kürzeren Panels übliche GMM-Ansatz nicht zwingend erforderlich, da der Nickell-Bias bei steigendem T gegen Null konvergiert.
+
+
+Identifikation: Die Cholesky-Reihenfolge wurde durch die vorangegangenen Granger-Kausalitätstests empirisch gestützt (exogener Block vs. endogener Block).
+
+Wie geht es weiter? Sobald du den Code ausgeführt hast, ist dein Modell „konserviert“. Wir können dann im nächsten Schritt die Impuls-Antwort-Funktionen (IRF) für die gesamte Gruppe generieren.
+
+Soll ich dir zeigen, wie du das gespeicherte Modell lädst, um die ersten Grafiken für die Schocks auf Stability zu erstellen?

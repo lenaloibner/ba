@@ -1,0 +1,191 @@
+baue mir auf Basis dieser Infos ein r Skript: Erstellung eines R-Skripts zur Prüfung der Datenstruktur
+Ziel: Identifikation von Korrelationen und Vorbereitung weiterer Schritte (z. B. Gewichtung)
+Methoden: Hauptkomponentenanalyse (PCA), ggf. Cluster-Analyse
+Theoretische Grundlage: Ergebnisse müssen mit dem Theoretical Framework (OECD, 2008, S. 25) übereinstimmen
+Konkret:
+Durchführung einer PCA in R
+Analyse der Korrelation zwischen WGI und invertiertem FSI
+Prüfung, ob beide Indikatoren unterschiedliche Informationen liefern
+Bewertung, ob die Indikatoren konzeptionell zusammenpassen
+Input-Datei:
+C:\Users\lenal\OneDrive\Dokumente\BA\data_raw\wgi_fsi_collected.csv
+Output-Pfad:
+C:\Users\lenal\OneDrive\Dokumente\BA\outputs
+
+
+Nachgedacht für 7s
+Gern — hier ist ein ausführliches, kommentiertes R-Skript (Deutsch), das deine Daten lädt, die Datenstruktur prüft, den FSI invertiert, eine PCA auf WGI und invertiertem FSI durchführt, die wichtigsten Ergebnisse speichert und Plots nach C:\Users\lenal\OneDrive\Dokumente\BA\outputs schreibt.
+Speichere das Skript z. B. als pca_wgi_fsi.R und führe es in RStudio aus. Das Skript ist robust gegen unterschiedliche Spaltennamen (es sucht nach Spalten, die "wgi" bzw. "fsi" im Namen haben, Groß-/Kleinschreibung ignoriert).
+# PCA-Skript: WGI + invertierter FSI
+# Lena Loibner - Bachelorarbeit
+# Pfade anpassen falls nötig
+
+# ---- Einstellungen / Pfade ----
+data_path <- "C:/Users/lenal/OneDrive/Dokumente/BA/data_raw/wgi_fsi_collected.csv"
+output_dir <- "C:/Users/lenal/OneDrive/Dokumente/BA/outputs"
+
+# Erstelle Output-Ordner falls nicht vorhanden
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+# ---- Pakete ----
+required_pkgs <- c("readr","dplyr","tidyr","ggplot2","factoextra","psych","corrplot")
+install_if_missing <- function(pkgs){
+  for(p in pkgs){
+    if(!requireNamespace(p, quietly = TRUE)) install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+install_if_missing(required_pkgs)
+
+# ---- Daten einlesen ----
+df <- readr::read_csv(data_path, show_col_types = FALSE)
+
+# Kurzer Blick auf die Struktur
+cat("Daten - erste Zeilen:\n")
+print(utils::head(df))
+cat("\nSpaltennamen:\n")
+print(colnames(df))
+
+# ---- Spalten identifizieren (WGI & FSI) ----
+# Suche nach Spalten, die "wgi" bzw "fsi" im Namen enthalten (case-insensitive)
+wgi_col <- colnames(df)[grepl("wgi", colnames(df), ignore.case = TRUE)][1]
+fsi_col <- colnames(df)[grepl("fsi|fragile|fragil", colnames(df), ignore.case = TRUE)][1]
+
+if(is.na(wgi_col) || is.na(fsi_col)){
+  stop("Fehler: Konnte WGI- oder FSI-Spalte nicht automatisch identifizieren. 
+       Bitte überprüfe die Spaltennamen in der CSV (z. B. 'wgi', 'fsi').")
+}
+
+cat("\nVerwendete Spalten:\nWGI ->", wgi_col, "\nFSI ->", fsi_col, "\n")
+
+# ---- Auswahl und Vorverarbeitung ----
+df_proc <- df %>%
+  dplyr::select(dplyr::everything(), wgi = !!sym(wgi_col), fsi = !!sym(fsi_col)) %>%
+  # Falls es zusätzliche Identifikationsspalten wie country, year gibt, behalten wir sie
+  dplyr::mutate(
+    # Invertiere FSI: höhere Werte nach der Inversion = stabiler
+    fsi_inv = -fsi
+  )
+
+# Check NA-Anteil
+na_summary <- sapply(df_proc %>% dplyr::select(wgi, fsi, fsi_inv), function(x) sum(is.na(x)))
+cat("\nNA-Zusammenfassung (WGI, FSI, FSI_inv):\n")
+print(na_summary)
+
+# Entferne Zeilen mit beiden fehlenden Werten für die PCA (mindestens eine Variable nötig)
+df_pca_ready <- df_proc %>%
+  dplyr::filter(!is.na(wgi) & !is.na(fsi_inv)) %>%
+  dplyr::select(-fsi)  # Roh-FSI nicht mehr nötig für PCA-Auswertung (wenn du sie behalten willst, entferne diese Zeile)
+
+cat("\nAnzahl Beobachtungen für PCA:", nrow(df_pca_ready), "\n")
+
+if (nrow(df_pca_ready) < 3) {
+  warning("Warnung: Weniger als 3 Beobachtungen verfügbar — PCA-Ergebnisse sind nicht aussagekräftig.")
+}
+
+# ---- Deskriptive Statistiken & Korrelation ----
+desc_stats <- psych::describe(df_pca_ready %>% dplyr::select(wgi, fsi_inv))
+write.csv(desc_stats, file = file.path(output_dir, "deskriptive_statistiken_wgi_fsiinv.csv"), row.names = TRUE)
+
+cor_mat <- cor(df_pca_ready %>% dplyr::select(wgi, fsi_inv), use = "pairwise.complete.obs")
+cat("\nKorrelationsmatrix:\n")
+print(cor_mat)
+# Speichere Korrelationsmatrix
+write.csv(cor_mat, file = file.path(output_dir, "correlation_wgi_fsiinv.csv"))
+
+# Plot Korrelationsmatrix
+png(filename = file.path(output_dir, "correlationplot_wgi_fsiinv.png"), width = 800, height = 600)
+corrplot::corrplot(cor_mat, method = "number", type = "upper", tl.col = "black", title = "Korrelationsmatrix WGI / FSI_inv", mar = c(0,0,1,0))
+dev.off()
+
+# ---- PCA durchführen ----
+# Standardisierung ist empfohlen (z-transform). Wir verwenden prcomp mit center = TRUE, scale. = TRUE
+pca_vars <- df_pca_ready %>% dplyr::select(wgi, fsi_inv)
+pca_res <- prcomp(na.omit(pca_vars), center = TRUE, scale. = TRUE)
+
+# Zusammenfassung
+pca_summary <- summary(pca_res)
+print(pca_summary)
+
+# Speichere Loadings, Variance explained, Scores
+loadings_df <- as.data.frame(pca_res$rotation)
+write.csv(loadings_df, file = file.path(output_dir, "pca_loadings_wgi_fsiinv.csv"), row.names = TRUE)
+
+variance_df <- data.frame(
+  PC = paste0("PC", 1:length(pca_res$sdev)),
+  Eigenwert = (pca_res$sdev)^2,
+  VarExplained = (pca_res$sdev)^2 / sum((pca_res$sdev)^2),
+  CumVarExplained = cumsum((pca_res$sdev)^2 / sum((pca_res$sdev)^2))
+)
+write.csv(variance_df, file = file.path(output_dir, "pca_variance_wgi_fsiinv.csv"), row.names = FALSE)
+
+scores_df <- as.data.frame(pca_res$x)
+# Falls es country/year-Spalten gab, füge sie an (sofern vorhanden)
+id_cols <- intersect(c("country","Country","COUNTRY","year","Year","YEAR"), colnames(df_pca_ready))
+if(length(id_cols) > 0){
+  scores_df <- cbind(df_pca_ready %>% dplyr::select(all_of(id_cols)), scores_df)
+}
+write.csv(scores_df, file = file.path(output_dir, "pca_scores_wgi_fsiinv.csv"), row.names = FALSE)
+
+# ---- Plots ----
+# Scree-Plot (Anteil erklärte Varianz)
+png(filename = file.path(output_dir, "pca_scree_wgi_fsiinv.png"), width = 800, height = 600)
+factoextra::fviz_eig(pca_res, addlabels = TRUE, ylim = c(0, 100)) + ggplot2::ggtitle("Scree-Plot: erklärter Varianzanteil")
+dev.off()
+
+# Biplot (bei 2 Variablen ist das sinnvoll)
+png(filename = file.path(output_dir, "pca_biplot_wgi_fsiinv.png"), width = 900, height = 700)
+factoextra::fviz_pca_biplot(pca_res, repel = TRUE, 
+                           title = "PCA Biplot (WGI & invertierter FSI)",
+                           label = "var")
+dev.off()
+
+# ---- Zusatz: einfache Cluster-Analyse (optional) ----
+# Hier ein kurzer Hierarchical Clustering der Beobachtungen basierend auf den standardisierten Variablen
+d <- dist(scale(pca_vars), method = "euclidean")
+hc <- hclust(d, method = "ward.D2")
+
+png(filename = file.path(output_dir, "dendrogram_hclust_wgi_fsiinv.png"), width = 900, height = 700)
+plot(hc, main = "Dendrogram: Hierarchical Clustering (WGI & FSI_inv)", xlab = "", sub = "")
+dev.off()
+
+# Optional: cut tree into 2-4 clusters und speichern
+clusters <- cutree(hc, k = 2)
+cluster_df <- df_pca_ready %>% dplyr::select(all_of(id_cols)) %>% dplyr::mutate(cluster = clusters)
+write.csv(cluster_df, file = file.path(output_dir, "clusters_wgi_fsiinv_k2.csv"), row.names = FALSE)
+
+# ---- KMO-Test (nur informativ; für 2 Variablen ist Aussagekraft begrenzt) ----
+# psych::KMO funktioniert, gibt aber bei sehr wenigen Variablen begrenzte Info
+kmo_res <- tryCatch({
+  psych::KMO(pca_vars)
+}, error = function(e) NULL)
+if(!is.null(kmo_res)){
+  capture.output(kmo_res, file = file.path(output_dir, "kmo_wgi_fsiinv.txt"))
+}
+
+# ---- Ergebnis-Log ----
+sink(file = file.path(output_dir, "pca_log_wgi_fsiinv.txt"))
+cat("PCA Skript ausgeführt am:", Sys.time(), "\n\n")
+cat("Eingabedatei:", data_path, "\n")
+cat("Output-Ordner:", output_dir, "\n\n")
+cat("Spalten verwendet:\n"); print(c(wgi_col, fsi_col))
+cat("\nAnzahl Beobachtungen für PCA: ", nrow(pca_vars), "\n\n")
+cat("Korrelationsmatrix:\n"); print(cor_mat); cat("\n\n")
+cat("PCA - Zusammenfassung:\n"); print(pca_summary); cat("\n\n")
+cat("Loadings:\n"); print(loadings_df); cat("\n\n")
+sink()
+
+cat("\nFertig. Alle Output-Dateien wurden nach:\n", output_dir, "\ngeschrieben.\n")
+________________________________________
+Was das Skript erzeugt (Output-Dateien im Ordner C:/Users/lenal/OneDrive/Dokumente/BA/outputs):
+•	deskriptive_statistiken_wgi_fsiinv.csv — Grundlegende Statistik (Mittelwert, SD etc.)
+•	correlation_wgi_fsiinv.csv + correlationplot_wgi_fsiinv.png — Korrelationsmatrix & Plot
+•	pca_loadings_wgi_fsiinv.csv — Ladegewichte (Loadings) der Komponenten
+•	pca_variance_wgi_fsiinv.csv — Eigenwerte und erklärter Varianzanteil
+•	pca_scores_wgi_fsiinv.csv — PCA-Komponentenscores pro Beobachtung (ggf. mit Country/Year)
+•	pca_scree_wgi_fsiinv.png — Scree-Plot
+•	pca_biplot_wgi_fsiinv.png — Biplot
+•	dendrogram_hclust_wgi_fsiinv.png + clusters_wgi_fsiinv_k2.csv — optionaler Dendrogram-Plot und einfache Cluster-Zuordnung
+•	pca_log_wgi_fsiinv.txt — Konsolidiertes Log mit wichtigsten Angaben
+•	kmo_wgi_fsiinv.txt (falls berechenbar) — KMO-Testausgabe
+
